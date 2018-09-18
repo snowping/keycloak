@@ -479,6 +479,7 @@ public class SamlProtocol implements LoginProtocol {
             }
             bindingBuilder.encrypt(publicKey);
         }
+
         try {
             return buildAuthenticatedResponse(clientSession, redirectUri, samlDocument, bindingBuilder);
         } catch (Exception e) {

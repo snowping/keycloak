@@ -59,7 +59,6 @@ public class SAMLResponseWriter extends BaseWriter {
      * Write a {@code ResponseType} to stream
      *
      * @param response
-     * @param out
      *
      * @throws org.keycloak.saml.common.exceptions.ProcessingException
      */
@@ -76,13 +75,13 @@ public class SAMLResponseWriter extends BaseWriter {
             StaxUtil.writeNameSpace(writer, sig.getPrefix(), XMLSignature.XMLNS);
         }
         StaxUtil.writeNameSpace(writer, PROTOCOL_PREFIX, JBossSAMLURIConstants.PROTOCOL_NSURI.get());
-        StaxUtil.writeNameSpace(writer, ASSERTION_PREFIX, JBossSAMLURIConstants.ASSERTION_NSURI.get());
+        StaxUtil.writeNameSpace(writer, SAML_RESPONSE_PREFIX, JBossSAMLURIConstants.ASSERTION_NSURI.get());
 
         writeBaseAttributes(response);
 
         NameIDType issuer = response.getIssuer();
         if (issuer != null) {
-            write(issuer, new QName(JBossSAMLURIConstants.ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), ASSERTION_PREFIX));
+            write(issuer, new QName(JBossSAMLURIConstants.ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), SAML_RESPONSE_PREFIX));
         }
 
         if (sig != null) {
@@ -119,14 +118,14 @@ public class SAMLResponseWriter extends BaseWriter {
         StaxUtil.writeStartElement(writer, PROTOCOL_PREFIX, JBossSAMLConstants.ARTIFACT_RESPONSE.get(), JBossSAMLURIConstants.PROTOCOL_NSURI.get());
 
         StaxUtil.writeNameSpace(writer, PROTOCOL_PREFIX, JBossSAMLURIConstants.PROTOCOL_NSURI.get());
-        StaxUtil.writeNameSpace(writer, ASSERTION_PREFIX, JBossSAMLURIConstants.ASSERTION_NSURI.get());
+        StaxUtil.writeNameSpace(writer, SAML_RESPONSE_PREFIX, JBossSAMLURIConstants.ASSERTION_NSURI.get());
         StaxUtil.writeDefaultNameSpace(writer, JBossSAMLURIConstants.ASSERTION_NSURI.get());
 
         writeBaseAttributes(response);
 
         NameIDType issuer = response.getIssuer();
         if (issuer != null) {
-            write(issuer, new QName(JBossSAMLURIConstants.ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), ASSERTION_PREFIX));
+            write(issuer, new QName(JBossSAMLURIConstants.ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), SAML_RESPONSE_PREFIX));
         }
 
         Element sig = response.getSignature();
@@ -161,7 +160,6 @@ public class SAMLResponseWriter extends BaseWriter {
      *
      * @param response
      * @param qname QName of the starting element
-     * @param out
      *
      * @throws ProcessingException
      */
@@ -179,7 +177,7 @@ public class SAMLResponseWriter extends BaseWriter {
         writeBaseAttributes(response);
 
         NameIDType issuer = response.getIssuer();
-        write(issuer, new QName(JBossSAMLURIConstants.ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), ASSERTION_PREFIX));
+        write(issuer, new QName(JBossSAMLURIConstants.ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), SAML_RESPONSE_PREFIX));
 
         Element sig = response.getSignature();
         if (sig != null) {
@@ -201,7 +199,6 @@ public class SAMLResponseWriter extends BaseWriter {
      * Write a {@code StatusType} to stream
      *
      * @param status
-     * @param out
      *
      * @throws ProcessingException
      */
@@ -229,7 +226,6 @@ public class SAMLResponseWriter extends BaseWriter {
      * Write a {@code StatusCodeType} to stream
      *
      * @param statusCodeType
-     * @param out
      *
      * @throws ProcessingException
      */
@@ -252,7 +248,6 @@ public class SAMLResponseWriter extends BaseWriter {
      * Write a {@code StatusDetailType} to stream
      *
      * @param statusDetailType
-     * @param out
      *
      * @throws ProcessingException
      */

@@ -115,7 +115,7 @@ public class SAMLRequestWriter extends BaseWriter {
 
         NameIDType issuer = request.getIssuer();
         if (issuer != null) {
-            write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), ASSERTION_PREFIX));
+            write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), SAML_PREFIX));
         }
 
         Element sig = request.getSignature();
@@ -170,7 +170,7 @@ public class SAMLRequestWriter extends BaseWriter {
             StaxUtil.writeAttribute(writer, JBossSAMLConstants.CONSENT.get(), consent);
 
         NameIDType issuer = logOutRequest.getIssuer();
-        write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), ASSERTION_PREFIX));
+        write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), SAML_PREFIX));
 
         Element signature = logOutRequest.getSignature();
         if (signature != null) {
@@ -184,7 +184,7 @@ public class SAMLRequestWriter extends BaseWriter {
 
         NameIDType nameID = logOutRequest.getNameID();
         if (nameID != null) {
-            write(nameID, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.NAMEID.get(), ASSERTION_PREFIX));
+            write(nameID, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.NAMEID.get(), SAML_PREFIX));
         }
 
         List<String> sessionIndexes = logOutRequest.getSessionIndex();
@@ -251,8 +251,8 @@ public class SAMLRequestWriter extends BaseWriter {
 
         if (authnContextClassRef != null && !authnContextClassRef.isEmpty()) {
             for (String classRef : authnContextClassRef) {
-                StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_CLASS_REF.get(), ASSERTION_NSURI.get());
-                StaxUtil.writeNameSpace(writer, ASSERTION_PREFIX, ASSERTION_NSURI.get());
+                StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_CLASS_REF.get(), ASSERTION_NSURI.get());
+                StaxUtil.writeNameSpace(writer, SAML_PREFIX, ASSERTION_NSURI.get());
                 StaxUtil.writeCharacters(writer, classRef);
                 StaxUtil.writeEndElement(writer);
             }
@@ -265,7 +265,7 @@ public class SAMLRequestWriter extends BaseWriter {
     public void write(ArtifactResolveType request) throws ProcessingException {
         StaxUtil.writeStartElement(writer, PROTOCOL_PREFIX, JBossSAMLConstants.ARTIFACT_RESOLVE.get(), PROTOCOL_NSURI.get());
         StaxUtil.writeNameSpace(writer, PROTOCOL_PREFIX, PROTOCOL_NSURI.get());
-        StaxUtil.writeNameSpace(writer, ASSERTION_PREFIX, ASSERTION_NSURI.get());
+        StaxUtil.writeNameSpace(writer, SAML_PREFIX, ASSERTION_NSURI.get());
         StaxUtil.writeDefaultNameSpace(writer, ASSERTION_NSURI.get());
 
         // Attributes
@@ -283,7 +283,7 @@ public class SAMLRequestWriter extends BaseWriter {
 
         NameIDType issuer = request.getIssuer();
         if (issuer != null) {
-            write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), ASSERTION_PREFIX));
+            write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), SAML_PREFIX));
         }
         Element sig = request.getSignature();
         if (sig != null) {
@@ -307,7 +307,7 @@ public class SAMLRequestWriter extends BaseWriter {
     public void write(AttributeQueryType request) throws ProcessingException {
         StaxUtil.writeStartElement(writer, PROTOCOL_PREFIX, JBossSAMLConstants.ATTRIBUTE_QUERY.get(), PROTOCOL_NSURI.get());
         StaxUtil.writeNameSpace(writer, PROTOCOL_PREFIX, PROTOCOL_NSURI.get());
-        StaxUtil.writeNameSpace(writer, ASSERTION_PREFIX, ASSERTION_NSURI.get());
+        StaxUtil.writeNameSpace(writer, SAML_PREFIX, ASSERTION_NSURI.get());
         StaxUtil.writeDefaultNameSpace(writer, ASSERTION_NSURI.get());
 
         // Attributes
@@ -325,7 +325,7 @@ public class SAMLRequestWriter extends BaseWriter {
 
         NameIDType issuer = request.getIssuer();
         if (issuer != null) {
-            write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), ASSERTION_PREFIX));
+            write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), SAML_PREFIX));
         }
         Element sig = request.getSignature();
         if (sig != null) {

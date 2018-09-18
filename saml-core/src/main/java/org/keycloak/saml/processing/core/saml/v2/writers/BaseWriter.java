@@ -62,7 +62,9 @@ public class BaseWriter {
 
     protected static String PROTOCOL_PREFIX = "samlp";
 
-    protected static String ASSERTION_PREFIX = "saml";
+    protected static String SAML_PREFIX = "saml";
+
+    protected static String SAML_RESPONSE_PREFIX = "samlr";
 
     protected static String XACML_SAML_PREFIX = "xacml-saml";
 
@@ -81,14 +83,13 @@ public class BaseWriter {
      *
      * @param nameIDType
      * @param tag
-     * @param out
      *
      * @throws org.keycloak.saml.common.exceptions.ProcessingException
      */
     public void write(NameIDType nameIDType, QName tag) throws ProcessingException {
         StaxUtil.writeStartElement(writer, tag.getPrefix(), tag.getLocalPart(), tag.getNamespaceURI());
 
-        StaxUtil.writeNameSpace(writer, ASSERTION_PREFIX, ASSERTION_NSURI.get());
+        StaxUtil.writeNameSpace(writer, SAML_PREFIX, ASSERTION_NSURI.get());
 
         URI format = nameIDType.getFormat();
         if (format != null) {
@@ -123,12 +124,11 @@ public class BaseWriter {
      * Write an {@code AttributeType} to stream
      *
      * @param attributeType
-     * @param out
      *
      * @throws ProcessingException
      */
     public void write(AttributeType attributeType) throws ProcessingException {
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.ATTRIBUTE.get(), ASSERTION_NSURI.get());
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.ATTRIBUTE.get(), ASSERTION_NSURI.get());
 
         writeAttributeTypeWithoutRootTag(attributeType);
 
@@ -186,13 +186,13 @@ public class BaseWriter {
     }
 
     public void writeNameIDTypeAttributeValue(NameIDType attributeValue) throws ProcessingException {
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.ATTRIBUTE_VALUE.get(), ASSERTION_NSURI.get());
-    	write((NameIDType)attributeValue, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.NAMEID.get(), ASSERTION_PREFIX));
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.ATTRIBUTE_VALUE.get(), ASSERTION_NSURI.get());
+    	write((NameIDType)attributeValue, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.NAMEID.get(), SAML_PREFIX));
         StaxUtil.writeEndElement(writer);
     }
 
     public void writeStringAttributeValue(String attributeValue) throws ProcessingException {
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.ATTRIBUTE_VALUE.get(), ASSERTION_NSURI.get());
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.ATTRIBUTE_VALUE.get(), ASSERTION_NSURI.get());
 
         StaxUtil.writeNameSpace(writer, JBossSAMLURIConstants.XSI_PREFIX.get(), JBossSAMLURIConstants.XSI_NSURI.get());
         StaxUtil.writeNameSpace(writer, "xs", JBossSAMLURIConstants.XMLSCHEMA_NSURI.get());
@@ -213,19 +213,18 @@ public class BaseWriter {
      * write an {@code SubjectType} to stream
      *
      * @param subject
-     * @param out
      *
      * @throws ProcessingException
      */
     public void write(SubjectType subject) throws ProcessingException {
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.SUBJECT.get(), ASSERTION_NSURI.get());
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.SUBJECT.get(), ASSERTION_NSURI.get());
 
         SubjectType.STSubType subType = subject.getSubType();
         if (subType != null) {
             BaseIDAbstractType baseID = subType.getBaseID();
             if (baseID instanceof NameIDType) {
                 NameIDType nameIDType = (NameIDType) baseID;
-                write(nameIDType, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.NAMEID.get(), ASSERTION_PREFIX));
+                write(nameIDType, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.NAMEID.get(), SAML_PREFIX));
             }
             EncryptedElementType enc = subType.getEncryptedID();
             if (enc != null)
@@ -271,7 +270,7 @@ public class BaseWriter {
     }
 
     private void write(SubjectConfirmationType subjectConfirmationType) throws ProcessingException {
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.SUBJECT_CONFIRMATION.get(),
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.SUBJECT_CONFIRMATION.get(),
                 ASSERTION_NSURI.get());
 
         StaxUtil.writeAttribute(writer, JBossSAMLConstants.METHOD.get(), subjectConfirmationType.getMethod());
@@ -282,7 +281,7 @@ public class BaseWriter {
         }
         NameIDType nameIDType = subjectConfirmationType.getNameID();
         if (nameIDType != null) {
-            write(nameIDType, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.NAMEID.get(), ASSERTION_PREFIX));
+            write(nameIDType, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.NAMEID.get(), SAML_PREFIX));
         }
         SubjectConfirmationDataType subjectConfirmationData = subjectConfirmationType.getSubjectConfirmationData();
         if (subjectConfirmationData != null) {
@@ -292,7 +291,7 @@ public class BaseWriter {
     }
 
     private void write(SubjectConfirmationDataType subjectConfirmationData) throws ProcessingException {
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.SUBJECT_CONFIRMATION_DATA.get(),
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.SUBJECT_CONFIRMATION_DATA.get(),
                 ASSERTION_NSURI.get());
 
         // Let us look at attributes

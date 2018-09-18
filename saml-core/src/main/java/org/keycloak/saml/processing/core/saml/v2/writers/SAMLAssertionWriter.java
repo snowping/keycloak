@@ -76,8 +76,8 @@ public class SAMLAssertionWriter extends BaseWriter {
     public void write(AssertionType assertion, boolean forceWriteDsigNamespace) throws ProcessingException {
         Element sig = assertion.getSignature();
 
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.ASSERTION.get(), ASSERTION_NSURI.get());
-        StaxUtil.writeNameSpace(writer, ASSERTION_PREFIX, ASSERTION_NSURI.get());
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.ASSERTION.get(), ASSERTION_NSURI.get());
+        StaxUtil.writeNameSpace(writer, SAML_PREFIX, ASSERTION_NSURI.get());
         if (forceWriteDsigNamespace && sig != null && sig.getPrefix() != null && ! sig.hasAttribute("xmlns:" + sig.getPrefix())) {
             StaxUtil.writeNameSpace(writer, sig.getPrefix(), XMLSignature.XMLNS);
         }
@@ -90,7 +90,7 @@ public class SAMLAssertionWriter extends BaseWriter {
 
         NameIDType issuer = assertion.getIssuer();
         if (issuer != null)
-            write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), ASSERTION_PREFIX));
+            write(issuer, new QName(ASSERTION_NSURI.get(), JBossSAMLConstants.ISSUER.get(), SAML_PREFIX));
 
         if (sig != null)
             StaxUtil.writeDOMElement(writer, sig);
@@ -102,7 +102,7 @@ public class SAMLAssertionWriter extends BaseWriter {
 
         ConditionsType conditions = assertion.getConditions();
         if (conditions != null) {
-            StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.CONDITIONS.get(), ASSERTION_NSURI.get());
+            StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.CONDITIONS.get(), ASSERTION_NSURI.get());
 
             if (conditions.getNotBefore() != null) {
                 StaxUtil.writeAttribute(writer, JBossSAMLConstants.NOT_BEFORE.get(), conditions.getNotBefore().toString());
@@ -118,12 +118,12 @@ public class SAMLAssertionWriter extends BaseWriter {
                 for (ConditionAbstractType typeCondition : typeOfConditions) {
                     if (typeCondition instanceof AudienceRestrictionType) {
                         AudienceRestrictionType art = (AudienceRestrictionType) typeCondition;
-                        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUDIENCE_RESTRICTION.get(),
+                        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUDIENCE_RESTRICTION.get(),
                                 ASSERTION_NSURI.get());
                         List<URI> audiences = art.getAudience();
                         if (audiences != null) {
                             for (URI audience : audiences) {
-                                StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUDIENCE.get(),
+                                StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUDIENCE.get(),
                                         ASSERTION_NSURI.get());
                                 StaxUtil.writeCharacters(writer, audience.toString());
                                 StaxUtil.writeEndElement(writer);
@@ -133,7 +133,7 @@ public class SAMLAssertionWriter extends BaseWriter {
                         StaxUtil.writeEndElement(writer);
                     }
                     if (typeCondition instanceof OneTimeUseType) {
-                        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.ONE_TIME_USE.get(),
+                        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.ONE_TIME_USE.get(),
                                 ASSERTION_NSURI.get());
                         StaxUtil.writeEndElement(writer);
                     }
@@ -176,7 +176,7 @@ public class SAMLAssertionWriter extends BaseWriter {
     }
 
     public void write(AttributeStatementType statement) throws ProcessingException {
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.ATTRIBUTE_STATEMENT.get(),
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.ATTRIBUTE_STATEMENT.get(),
                 ASSERTION_NSURI.get());
 
         List<ASTChoiceType> attributes = statement.getAttributes();
@@ -204,9 +204,9 @@ public class SAMLAssertionWriter extends BaseWriter {
      * @throws ProcessingException
      */
     public void write(AuthnStatementType authnStatement, boolean includeNamespace) throws ProcessingException {
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUTHN_STATEMENT.get(), ASSERTION_NSURI.get());
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUTHN_STATEMENT.get(), ASSERTION_NSURI.get());
         if (includeNamespace) {
-            StaxUtil.writeNameSpace(writer, ASSERTION_PREFIX, ASSERTION_NSURI.get());
+            StaxUtil.writeNameSpace(writer, SAML_PREFIX, ASSERTION_NSURI.get());
             StaxUtil.writeDefaultNameSpace(writer, ASSERTION_NSURI.get());
         }
 
@@ -237,13 +237,13 @@ public class SAMLAssertionWriter extends BaseWriter {
      * @throws ProcessingException
      */
     public void write(AuthnContextType authContext) throws ProcessingException {
-        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT.get(), ASSERTION_NSURI.get());
+        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT.get(), ASSERTION_NSURI.get());
 
         AuthnContextType.AuthnContextTypeSequence sequence = authContext.getSequence();
         if (sequence != null) {
             AuthnContextClassRefType authnContextClassRefType = sequence.getClassRef();
             if (authnContextClassRefType != null) {
-                StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_CLASS_REF.get(),
+                StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_CLASS_REF.get(),
                         ASSERTION_NSURI.get());
                 StaxUtil.writeCharacters(writer, authnContextClassRefType.getValue().toASCIIString());
                 StaxUtil.writeEndElement(writer);
@@ -253,13 +253,13 @@ public class SAMLAssertionWriter extends BaseWriter {
             if (uriTypes != null) {
                 for (URIType uriType : uriTypes) {
                     if (uriType instanceof AuthnContextDeclType) {
-                        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_DECL.get(),
+                        StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_DECL.get(),
                                 ASSERTION_NSURI.get());
                         StaxUtil.writeCharacters(writer, uriType.getValue().toASCIIString());
                         StaxUtil.writeEndElement(writer);
                     }
                     if (uriType instanceof AuthnContextDeclRefType) {
-                        StaxUtil.writeStartElement(writer, ASSERTION_PREFIX,
+                        StaxUtil.writeStartElement(writer, SAML_PREFIX,
                                 JBossSAMLConstants.AUTHN_CONTEXT_DECL_REF.get(), ASSERTION_NSURI.get());
                         StaxUtil.writeCharacters(writer, uriType.getValue().toASCIIString());
                         StaxUtil.writeEndElement(writer);
@@ -271,7 +271,7 @@ public class SAMLAssertionWriter extends BaseWriter {
         Set<URI> authAuthorities = authContext.getAuthenticatingAuthority();
         if (authAuthorities != null) {
             for (URI aa : authAuthorities) {
-                StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUTHENTICATING_AUTHORITY.get(),
+                StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUTHENTICATING_AUTHORITY.get(),
                         ASSERTION_NSURI.get());
                 StaxUtil.writeCharacters(writer, aa.toASCIIString());
                 StaxUtil.writeEndElement(writer);
@@ -281,17 +281,17 @@ public class SAMLAssertionWriter extends BaseWriter {
         Set<URIType> uriTypes = authContext.getURIType();
         for (URIType uriType : uriTypes) {
             if (uriType instanceof AuthnContextClassRefType) {
-                StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_CLASS_REF.get(),
+                StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_CLASS_REF.get(),
                         ASSERTION_NSURI.get());
                 StaxUtil.writeCharacters(writer, uriType.getValue().toString());
                 StaxUtil.writeEndElement(writer);
             } else if (uriType instanceof AuthnContextDeclRefType) {
-                StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_DECL_REF.get(),
+                StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_DECL_REF.get(),
                         ASSERTION_NSURI.get());
                 StaxUtil.writeCharacters(writer, uriType.getValue().toString());
                 StaxUtil.writeEndElement(writer);
             } else if (uriType instanceof AuthnContextDeclType) {
-                StaxUtil.writeStartElement(writer, ASSERTION_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_DECL.get(),
+                StaxUtil.writeStartElement(writer, SAML_PREFIX, JBossSAMLConstants.AUTHN_CONTEXT_DECL.get(),
                         ASSERTION_NSURI.get());
                 StaxUtil.writeCharacters(writer, uriType.getValue().toString());
                 StaxUtil.writeEndElement(writer);

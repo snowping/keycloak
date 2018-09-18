@@ -47,7 +47,8 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.AuthorizationEndpointBase;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.protocol.oidc.utils.RedirectUtils;
-import org.keycloak.protocol.saml.profile.ecp.SamlEcpProfileService;
+import org.keycloak.protocol.saml.profile.soap.ecp.SamlEcpProfileService;
+import org.keycloak.protocol.saml.profile.soap.util.Soap;
 import org.keycloak.saml.SAML2LogoutResponseBuilder;
 import org.keycloak.saml.SAMLRequestParser;
 import org.keycloak.saml.SignatureAlgorithm;
@@ -87,6 +88,7 @@ import org.keycloak.saml.SPMetadataDescriptor;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
 import org.keycloak.saml.validators.DestinationValidator;
 import org.keycloak.sessions.AuthenticationSessionModel;
+import org.w3c.dom.Document;
 
 /**
  * Resource class for the saml connect token service
@@ -694,10 +696,12 @@ public class SamlService extends AuthorizationEndpointBase {
     @NoCache
     @Consumes({"application/soap+xml",MediaType.TEXT_XML})
     public Response soapBinding(InputStream inputStream) {
+        Document soapBodyContents = Soap.extractSoapMessage(inputStream);
+
         SamlEcpProfileService bindingService = new SamlEcpProfileService(realm, event, destinationValidator);
 
         ResteasyProviderFactory.getInstance().injectProperties(bindingService);
 
-        return bindingService.authenticate(inputStream);
+        return bindingService.authenticate(soapBodyContents);
     }
 }

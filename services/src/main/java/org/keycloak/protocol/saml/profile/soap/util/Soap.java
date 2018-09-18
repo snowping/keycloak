@@ -15,13 +15,14 @@
  * limitations under the License.
  */
 
-package org.keycloak.protocol.saml.profile.ecp.util;
+package org.keycloak.protocol.saml.profile.soap.util;
 
 import org.keycloak.saml.processing.core.saml.v2.util.DocumentUtil;
 import org.keycloak.saml.processing.web.util.PostBindingUtil;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.xml.soap.MessageFactory;
@@ -50,15 +51,23 @@ public final class Soap {
 
     /**
      * <p>Returns a string encoded accordingly with the SAML HTTP POST Binding specification based on the
-     * given <code>inputStream</code> which must contain a valid SOAP message.
+     * given <code>document</code> which must contain a valid SAML message.
      *
      * <p>The resulting string is based on the Body of the SOAP message, which should map to a valid SAML message.
      *
-     * @param inputStream the input stream containing a valid SOAP message with a Body that contains a SAML message
+     * @param document A document that contains a SAML message
      *
      * @return a string encoded accordingly with the SAML HTTP POST Binding specification
      */
-    public static String toSamlHttpPostMessage(InputStream inputStream) {
+    public static String toSamlHttpPostMessage(Document document) {
+        try {
+            return PostBindingUtil.base64Encode(DocumentUtil.asString(document));
+        } catch (Exception e) {
+            throw new RuntimeException("Error encoding SOAP document to String.", e);
+        }
+    }
+
+    public static Document extractSoapMessage(InputStream inputStream){
         try {
             MessageFactory messageFactory = MessageFactory.newInstance();
             SOAPMessage soapMessage = messageFactory.createMessage(null, inputStream);
@@ -67,10 +76,9 @@ public final class Soap {
             Document document = DocumentUtil.createDocument();
 
             document.appendChild(document.importNode(authnRequestNode, true));
-
-            return PostBindingUtil.base64Encode(DocumentUtil.asString(document));
+            return document;
         } catch (Exception e) {
-            throw new RuntimeException("Error creating fault message.", e);
+            throw new RuntimeException("Error extracting SOAP message contents.", e);
         }
     }
 
@@ -85,7 +93,7 @@ public final class Soap {
                 this.envelope = message.getSOAPPart().getEnvelope();
                 this.body = message.getSOAPBody();
             } catch (Exception e) {
-                throw new RuntimeException("Error creating fault message.", e);
+                throw new RuntimeException("Error creating Soap Message.", e);
             }
         }
 
@@ -136,7 +144,7 @@ public final class Soap {
                 throw new RuntimeException("Error while building SOAP Fault.", e);
             }
 
-            return Response.status(status).entity(outputStream.toByteArray()).build();
+            return Response.status(status).entity(outputStream.toByteArray()).type(MediaType.TEXT_XML_TYPE).build();
         }
 
         SOAPMessage getMessage() {

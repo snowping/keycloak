@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.keycloak.protocol.saml.profile.ecp;
+package org.keycloak.protocol.saml.profile.soap.ecp;
 
 import org.keycloak.dom.saml.v2.protocol.AuthnRequestType;
 import org.keycloak.events.EventBuilder;
@@ -29,7 +29,7 @@ import org.keycloak.protocol.saml.JaxrsSAML2BindingBuilder;
 import org.keycloak.protocol.saml.SamlConfigAttributes;
 import org.keycloak.protocol.saml.SamlProtocol;
 import org.keycloak.protocol.saml.SamlService;
-import org.keycloak.protocol.saml.profile.ecp.util.Soap;
+import org.keycloak.protocol.saml.profile.soap.util.Soap;
 import org.keycloak.saml.SAML2LogoutResponseBuilder;
 import org.keycloak.saml.common.constants.JBossSAMLConstants;
 import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
@@ -44,7 +44,6 @@ import javax.xml.soap.SOAPException;
 import javax.xml.soap.SOAPHeaderElement;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Map;
 
 /**
  * @author <a href="mailto:psilva@redhat.com">Pedro Igor</a>
@@ -59,7 +58,7 @@ public class SamlEcpProfileService extends SamlService {
         super(realm, event, destinationValidator);
     }
 
-    public Response authenticate(InputStream inputStream) {
+    public Response authenticate(Document doc) {
         try {
             return new PostBindingProtocol() {
                 @Override
@@ -74,7 +73,7 @@ public class SamlEcpProfileService extends SamlService {
                     requestAbstractType.setDestination(session.getContext().getUri().getAbsolutePath());
                     return super.loginRequest(relayState, requestAbstractType, client);
                 }
-            }.execute(Soap.toSamlHttpPostMessage(inputStream), null, null);
+            }.execute(Soap.toSamlHttpPostMessage(doc), null, null);
         } catch (Exception e) {
             String reason = "Some error occurred while processing the AuthnRequest.";
             String detail = e.getMessage();

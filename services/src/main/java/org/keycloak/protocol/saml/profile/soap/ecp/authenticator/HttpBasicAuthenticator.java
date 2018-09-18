@@ -1,4 +1,4 @@
-package org.keycloak.protocol.saml.profile.ecp.authenticator;
+package org.keycloak.protocol.saml.profile.soap.ecp.authenticator;
 
 import org.jboss.resteasy.spi.HttpRequest;
 import org.keycloak.authentication.AuthenticationFlowContext;

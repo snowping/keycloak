@@ -8,7 +8,7 @@ import org.keycloak.events.Errors;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserModel;
-import org.keycloak.protocol.saml.profile.ecp.authenticator.HttpBasicAuthenticator;
+import org.keycloak.protocol.saml.profile.soap.ecp.authenticator.HttpBasicAuthenticator;
 import org.keycloak.representations.docker.DockerAccess;
 import org.keycloak.representations.docker.DockerError;
 import org.keycloak.representations.docker.DockerErrorResponseToken;
