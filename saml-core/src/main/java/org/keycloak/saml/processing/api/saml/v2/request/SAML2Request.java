@@ -161,7 +161,10 @@ public class SAML2Request {
             throw logger.nullArgumentError("InputStream");
 
         Document samlDocument = DocumentUtil.getDocument(is);
+        return getSAML2ObjectFromDocument(samlDocument);
+    }
 
+    public static SAMLDocumentHolder getSAML2ObjectFromDocument(Document samlDocument) throws ProcessingException, ParsingException {
         SAMLParser samlParser = SAMLParser.getInstance();
         JAXPValidationUtil.checkSchemaValidation(samlDocument);
         SAML2Object requestType = (SAML2Object) samlParser.parse(samlDocument);

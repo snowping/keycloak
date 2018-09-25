@@ -255,6 +255,9 @@ public class ClientSettingsForm extends CreateClientForm {
         private OnOffSwitch samlAuthnStatement;
         @FindBy(xpath = ".//div[@class='onoffswitch' and ./input[@id='samlOneTimeUseCondition']]")
         private OnOffSwitch samlOneTimeUseCondition;
+        //TODO arquillian tests with artifact binding
+        //@FindBy(xpath = ".//div[@class='onoffswitch' and ./input[@id='samlArtifactBinding']]")
+        //private OnOffSwitch samlArtifactBinding
         @FindBy(xpath = ".//div[@class='onoffswitch' and ./input[@id='samlServerSignature']]")
         private OnOffSwitch samlServerSignature;
         @FindBy(xpath = ".//div[@class='onoffswitch' and ./input[@id='samlServerSignatureEnableKeyInfoExtension']]")

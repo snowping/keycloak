@@ -46,6 +46,7 @@ import org.keycloak.protocol.ProtocolMapper;
 import org.keycloak.protocol.saml.mappers.SAMLAttributeStatementMapper;
 import org.keycloak.protocol.saml.mappers.SAMLLoginResponseMapper;
 import org.keycloak.protocol.saml.mappers.SAMLRoleListMapper;
+import org.keycloak.protocol.saml.profile.soap.artifact.ArtifactBinding;
 import org.keycloak.saml.SAML2ErrorResponseBuilder;
 import org.keycloak.saml.SAML2LoginResponseBuilder;
 import org.keycloak.saml.SAML2LogoutRequestBuilder;
@@ -60,7 +61,6 @@ import org.keycloak.saml.common.util.XmlKeyInfoKeyNameTransformer;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.managers.AuthenticationSessionManager;
-import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.managers.ResourceAdminManager;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.RealmsResource;
@@ -98,6 +98,7 @@ public class SamlProtocol implements LoginProtocol {
     public static final String SAML_ASSERTION_CONSUMER_URL_REDIRECT_ATTRIBUTE = "saml_assertion_consumer_url_redirect";
     public static final String SAML_SINGLE_LOGOUT_SERVICE_URL_POST_ATTRIBUTE = "saml_single_logout_service_url_post";
     public static final String SAML_SINGLE_LOGOUT_SERVICE_URL_REDIRECT_ATTRIBUTE = "saml_single_logout_service_url_redirect";
+    public static final String SAML_ARTIFACT_BINDING_URL = "saml_artifact_binding_url";
     public static final String LOGIN_PROTOCOL = "saml";
     public static final String SAML_BINDING = "saml_binding";
     public static final String SAML_IDP_INITIATED_LOGIN = "saml_idp_initiated_login";
@@ -378,6 +379,9 @@ public class SamlProtocol implements LoginProtocol {
         String nameIdFormat = getNameIdFormat(samlClient, clientSession);
         String nameId = getNameId(nameIdFormat, clientSession, userSession);
 
+        ArtifactBinding ab = ArtifactBinding.getSingletonInstance();
+        String artifact = null;
+
         if (nameId == null) {
             return samlErrorMessage(
               null, samlClient, isPostBinding(clientSession),
@@ -447,6 +451,9 @@ public class SamlProtocol implements LoginProtocol {
 
             samlModel = transformLoginResponse(loginResponseMappers, samlModel, session, userSession, clientSession);
             samlDocument = builder.buildDocument(samlModel);
+            if (samlClient.useArtifactBinding()) {
+                artifact = ab.saveArtifactResponse(samlModel, RealmsResource.realmBaseUrl(uriInfo).build(realm.getName()).toString());
+            }
         } catch (Exception e) {
             logger.error("failed", e);
             return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.FAILED_TO_PROCESS_RESPONSE);
@@ -455,13 +462,8 @@ public class SamlProtocol implements LoginProtocol {
         JaxrsSAML2BindingBuilder bindingBuilder = new JaxrsSAML2BindingBuilder();
         bindingBuilder.relayState(relayState);
 
-        if (samlClient.requiresRealmSignature()) {
-            String canonicalization = samlClient.getCanonicalizationMethod();
-            if (canonicalization != null) {
-                bindingBuilder.canonicalizationMethod(canonicalization);
-            }
-            bindingBuilder.signatureAlgorithm(samlClient.getSignatureAlgorithm()).signWith(keyName, keys.getPrivateKey(), keys.getPublicKey(), keys.getCertificate()).signDocument();
-        }
+        Document artifactResponse = ab.getArtifactResponse(artifact);
+
         if (samlClient.requiresAssertionSignature()) {
             String canonicalization = samlClient.getCanonicalizationMethod();
             if (canonicalization != null) {
@@ -469,6 +471,7 @@ public class SamlProtocol implements LoginProtocol {
             }
             bindingBuilder.signatureAlgorithm(samlClient.getSignatureAlgorithm()).signWith(keyName, keys.getPrivateKey(), keys.getPublicKey(), keys.getCertificate()).signAssertions();
         }
+
         if (samlClient.requiresEncryption()) {
             PublicKey publicKey = null;
             try {
@@ -480,7 +483,41 @@ public class SamlProtocol implements LoginProtocol {
             bindingBuilder.encrypt(publicKey);
         }
 
+        if (samlClient.requiresRealmSignature()) {
+            String canonicalization = samlClient.getCanonicalizationMethod();
+            if (canonicalization != null) {
+                bindingBuilder.canonicalizationMethod(canonicalization);
+            }
+            bindingBuilder.signatureAlgorithm(samlClient.getSignatureAlgorithm()).signWith(keyName, keys.getPrivateKey(), keys.getPublicKey(), keys.getCertificate()).signDocument();
+        }
+
+        //postprocess artifact response with signatures and encryption
+        if (samlClient.useArtifactBinding() && artifactResponse != null){
+            try {
+                if (samlClient.requiresAssertionSignature()) {
+                    bindingBuilder.signAssertion(artifactResponse);
+                }
+                if (samlClient.requiresEncryption()) {
+                    bindingBuilder.encryptDocument(artifactResponse);
+                }
+                if (samlClient.requiresRealmSignature()) {
+                    bindingBuilder.signArtifactResponse(artifactResponse);
+                }
+            } catch (ProcessingException e) {
+                logger.error("failed", e);
+                return ErrorPage.error(session, null, Response.Status.INTERNAL_SERVER_ERROR,
+                        "failed while signing and encrypting ArtifactResponse");
+            }
+        }
+
         try {
+            if (samlClient.useArtifactBinding()) {
+                String configuredArtifactRedirectUri = client.getAttribute(SAML_ARTIFACT_BINDING_URL);
+                if ( configuredArtifactRedirectUri != null && !configuredArtifactRedirectUri.isEmpty()){
+                    redirectUri = configuredArtifactRedirectUri;
+                }
+                return ab.artifactRedirect(redirectUri, artifact);
+            }
             return buildAuthenticatedResponse(clientSession, redirectUri, samlDocument, bindingBuilder);
         } catch (Exception e) {
             logger.error("failed", e);

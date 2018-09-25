@@ -28,11 +28,7 @@ import org.keycloak.dom.saml.v2.SAML2Object;
 import org.keycloak.dom.saml.v2.assertion.BaseIDAbstractType;
 import org.keycloak.dom.saml.v2.assertion.NameIDType;
 import org.keycloak.dom.saml.v2.assertion.SubjectType;
-import org.keycloak.dom.saml.v2.protocol.AuthnRequestType;
-import org.keycloak.dom.saml.v2.protocol.LogoutRequestType;
-import org.keycloak.dom.saml.v2.protocol.NameIDPolicyType;
-import org.keycloak.dom.saml.v2.protocol.RequestAbstractType;
-import org.keycloak.dom.saml.v2.protocol.StatusResponseType;
+import org.keycloak.dom.saml.v2.protocol.*;
 import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
@@ -47,6 +43,7 @@ import org.keycloak.models.UserSessionModel;
 import org.keycloak.protocol.AuthorizationEndpointBase;
 import org.keycloak.protocol.oidc.OIDCLoginProtocol;
 import org.keycloak.protocol.oidc.utils.RedirectUtils;
+import org.keycloak.protocol.saml.profile.soap.artifact.ArtifactBinding;
 import org.keycloak.protocol.saml.profile.soap.ecp.SamlEcpProfileService;
 import org.keycloak.protocol.saml.profile.soap.util.Soap;
 import org.keycloak.saml.SAML2LogoutResponseBuilder;
@@ -54,6 +51,7 @@ import org.keycloak.saml.SAMLRequestParser;
 import org.keycloak.saml.SignatureAlgorithm;
 import org.keycloak.saml.common.constants.GeneralConstants;
 import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
+import org.keycloak.saml.processing.api.saml.v2.request.SAML2Request;
 import org.keycloak.saml.processing.core.saml.v2.common.SAMLDocumentHolder;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.managers.AuthenticationManager;
@@ -696,12 +694,28 @@ public class SamlService extends AuthorizationEndpointBase {
     @NoCache
     @Consumes({"application/soap+xml",MediaType.TEXT_XML})
     public Response soapBinding(InputStream inputStream) {
+        ArtifactBinding ab = ArtifactBinding.getSingletonInstance();
         Document soapBodyContents = Soap.extractSoapMessage(inputStream);
+        try {
+            SAMLDocumentHolder samlDoc = SAML2Request.getSAML2ObjectFromDocument(soapBodyContents);
+            if (samlDoc.getSamlObject() instanceof ArtifactResolveType) {
+                logger.debug("Received artifact resolve message");
+                //TODO log full artifact resolve in debug
+                ArtifactResolveType art = (ArtifactResolveType)samlDoc.getSamlObject();
+                return ab.buildArtifactResponse(art.getArtifact());
+            }
+        } catch (Exception e) {
+            String reason = "An error occurred while trying to return the artifactResponse";
+            String detail = e.getMessage();
+
+            if (detail == null) {
+                detail = reason;
+            }
+            return Soap.createFault().reason(reason).detail(detail).build();
+        }
 
         SamlEcpProfileService bindingService = new SamlEcpProfileService(realm, event, destinationValidator);
-
         ResteasyProviderFactory.getInstance().injectProperties(bindingService);
-
         return bindingService.authenticate(soapBodyContents);
     }
 }

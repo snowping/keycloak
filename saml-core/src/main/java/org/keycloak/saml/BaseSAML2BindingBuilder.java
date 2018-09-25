@@ -275,6 +275,26 @@ public class BaseSAML2BindingBuilder<T extends BaseSAML2BindingBuilder> {
         samlSignature.signSAMLDocument(samlDocument, signingKeyName, signingKeyPair, canonicalizationMethodType);
     }
 
+    public void signArtifactResponse(Document samlDocument) throws ProcessingException {
+        String signatureMethod = signatureAlgorithm.getXmlSignatureMethod();
+        String signatureDigestMethod = signatureAlgorithm.getXmlSignatureDigestMethod();
+        SAML2Signature samlSignature = new SAML2Signature();
+
+        if (signatureMethod != null) {
+            samlSignature.setSignatureMethod(signatureMethod);
+        }
+
+        if (signatureDigestMethod != null) {
+            samlSignature.setDigestMethod(signatureDigestMethod);
+        }
+
+        if (signingCertificate != null) {
+            samlSignature.setX509Certificate(signingCertificate);
+        }
+
+        samlSignature.signSAMLDocument(samlDocument, signingKeyName, signingKeyPair, canonicalizationMethodType);
+    }
+
     public void signAssertion(Document samlDocument) throws ProcessingException {
         Element originalAssertionElement = org.keycloak.saml.common.util.DocumentUtil.getChildElement(samlDocument.getDocumentElement(), new QName(JBossSAMLURIConstants.ASSERTION_NSURI.get(), JBossSAMLConstants.ASSERTION.get()));
         if (originalAssertionElement == null) return;
