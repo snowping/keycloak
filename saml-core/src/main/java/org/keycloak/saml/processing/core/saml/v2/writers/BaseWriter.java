@@ -64,8 +64,6 @@ public class BaseWriter {
 
     protected static String SAML_PREFIX = "saml";
 
-    protected static String SAML_RESPONSE_PREFIX = "samlr";
-
     protected static String XACML_SAML_PREFIX = "xacml-saml";
 
     protected static String XACML_SAML_PROTO_PREFIX = "xacml-samlp";
