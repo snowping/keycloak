@@ -420,6 +420,7 @@ public class SamlService extends AuthorizationEndpointBase {
                 }
                 if (relayState != null)
                     userSession.setNote(SamlProtocol.SAML_LOGOUT_RELAY_STATE, relayState);
+
                 userSession.setNote(SamlProtocol.SAML_LOGOUT_REQUEST_ID, logoutRequest.getID());
                 userSession.setNote(SamlProtocol.SAML_LOGOUT_BINDING, logoutBinding);
                 userSession.setNote(SamlProtocol.SAML_LOGOUT_ADD_EXTENSIONS_ELEMENT_WITH_KEY_INFO, Boolean.toString((! postBinding) && samlClient.addExtensionsElementWithKeyInfo()));
@@ -430,6 +431,11 @@ public class SamlService extends AuthorizationEndpointBase {
                 AuthenticatedClientSessionModel clientSession = userSession.getAuthenticatedClientSessionByClient(client.getId());
                 if (clientSession != null) {
                     clientSession.setAction(AuthenticationSessionModel.Action.LOGGED_OUT.name());
+                    //artifact binding state must be attached to the user session upon logout, as authenticated session
+                    //no longer exists when the LogoutResponse message is sent
+                    if ("true".equals(clientSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get()))){
+                        userSession.setNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get(), "true");
+                    }
                 }
                 logger.debug("browser Logout");
                 return authManager.browserLogout(session, realm, userSession, session.getContext().getUri(), clientConnection, headers);
@@ -455,7 +461,6 @@ public class SamlService extends AuthorizationEndpointBase {
             }
 
             // default
-
             String logoutBinding = getBindingType();
             String logoutBindingUri = SamlProtocol.getLogoutServiceUrl(session.getContext().getUri(), client, logoutBinding);
             String logoutRelayState = relayState;
