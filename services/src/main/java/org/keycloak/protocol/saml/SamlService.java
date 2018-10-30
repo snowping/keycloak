@@ -444,7 +444,6 @@ public class SamlService extends AuthorizationEndpointBase {
                         // remove requesting client from logout
                         clientSession.setAction(AuthenticationSessionModel.Action.LOGGED_OUT.name());
                     }
-
                     try {
                         authManager.backchannelLogout(session, realm, userSession, session.getContext().getUri(), clientConnection, headers, true);
                     } catch (Exception e) {
@@ -829,6 +828,14 @@ public class SamlService extends AuthorizationEndpointBase {
                     clientSession.removeNote(artifact);
                     return DocumentUtil.getDocument(response);
                 }
+            }
+        }
+        //check if it is the logout message
+        for (UserSessionModel userSession: userSessions) {
+            String response = userSession.getNote(artifact);
+            if (response != null && ! response.isEmpty()) {
+                userSession.removeNote(artifact);
+                return DocumentUtil.getDocument(response);
             }
         }
         throw new ProcessingException("Cannot find artifact "+ artifact + " in cache");

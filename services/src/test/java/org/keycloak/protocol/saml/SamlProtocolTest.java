@@ -43,7 +43,7 @@ public class SamlProtocolTest {
         writer.write(response);
         Document responseDoc = DocumentUtil.getDocument(new ByteArrayInputStream(bos.toByteArray()));
 
-        Document artifactResponseDoc = protocol.buildArtifactResponse(responseDoc);
+        Document artifactResponseDoc = protocol.buildArtifactResponseDocument(responseDoc);
         String artifactResponse = DocumentUtil.asString(artifactResponseDoc);
 
         assertTrue(artifactResponse.contains("samlp:ArtifactResponse"));
