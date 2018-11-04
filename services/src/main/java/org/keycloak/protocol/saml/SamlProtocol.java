@@ -571,22 +571,27 @@ public class SamlProtocol implements LoginProtocol {
                 logger.warnf("Failed to logout client %s, skipping this client.  Please configure the logout service url in the admin console for your client applications.", client.getClientId());
                 return null;
             }
-
-            if (postBinding) {
-                SAML2LogoutRequestBuilder logoutBuilder = createLogoutRequest(bindingUri, clientSession, client);
-                // This is POST binding, hence KeyID is included in dsig:KeyInfo/dsig:KeyName, no need to add <samlp:Extensions> element
-                JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient);
-                return binding.postBinding(logoutBuilder.buildDocument()).request(bindingUri);
-            } else {
-                logger.debug("frontchannel redirect binding");
-                SAML2LogoutRequestBuilder logoutBuilder = createLogoutRequest(bindingUri, clientSession, client);
+            JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient);
+            SAML2LogoutRequestBuilder logoutBuilder = createLogoutRequest(bindingUri, clientSession, client);
+            if (!postBinding) {
                 if (samlClient.requiresRealmSignature() && samlClient.addExtensionsElementWithKeyInfo()) {
                     KeyManager.ActiveRsaKey keys = session.keys().getActiveRsaKey(realm);
                     String keyName = samlClient.getXmlSigKeyInfoKeyNameTransformer().getKeyName(keys.getKid(), keys.getCertificate());
                     logoutBuilder.addExtension(new KeycloakKeySamlExtensionGenerator(keyName));
                 }
-                JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient);
-                return binding.redirectBinding(logoutBuilder.buildDocument()).request(bindingUri);
+            }
+            Document samlDocument = logoutBuilder.buildDocument();
+
+            if ("true".equals(clientSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get()))) {
+                return buildArtifactAuthenticatedResponse(clientSession, bindingUri, samlDocument, binding);
+            }
+
+            if (postBinding) {
+                // This is POST binding, hence KeyID is included in dsig:KeyInfo/dsig:KeyName, no need to add <samlp:Extensions> element
+                return binding.postBinding(samlDocument).request(bindingUri);
+            } else {
+                logger.debug("frontchannel redirect binding");
+                return binding.redirectBinding(samlDocument).request(bindingUri);
             }
         } catch (ConfigurationException e) {
             throw new RuntimeException(e);
@@ -597,7 +602,6 @@ public class SamlProtocol implements LoginProtocol {
         } catch (ParsingException e) {
             throw new RuntimeException(e);
         }
-
     }
 
     @Override
@@ -657,10 +661,17 @@ public class SamlProtocol implements LoginProtocol {
     }
 
     protected Response buildLogoutResponse(UserSessionModel userSession, String logoutBindingUri, SAML2LogoutResponseBuilder builder, JaxrsSAML2BindingBuilder binding) throws ConfigurationException, ProcessingException, IOException {
+
+        Document samlDocument = builder.buildDocument();
+
+        if ("true".equals(userSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get()))){
+            return buildLogoutArtifactResponse(userSession, logoutBindingUri, samlDocument, binding);
+        }
+
         if (isLogoutPostBindingForInitiator(userSession)) {
-            return binding.postBinding(builder.buildDocument()).response(logoutBindingUri);
+            return binding.postBinding(samlDocument).response(logoutBindingUri);
         } else {
-            return binding.redirectBinding(builder.buildDocument()).response(logoutBindingUri);
+            return binding.redirectBinding(samlDocument).response(logoutBindingUri);
         }
     }
 
@@ -787,6 +798,43 @@ public class SamlProtocol implements LoginProtocol {
         logger.debug("Sending artifact "+ artifact + " to client " + clientSession.getClient().getClientId());
 
         if (isPostBinding(clientSession)) {
+            return artifactPost(redirectUri, artifact, relayState, bindingBuilder);
+        } else {
+            return artifactRedirect(redirectUri, artifact, relayState);
+        }
+    }
+
+    /**
+     * This method, instead of sending the actual response with the token, stores it in the user session cache, and sends
+     * the artifact message via post or redirect. This method is only to be used for the final LogoutResponse.
+     *
+     * @param userSession The current user session being logged out
+     * @param redirectUri the redirect uri to the client
+     * @param samlDocument a Document containing the saml Response
+     * @param bindingBuilder the current JaxrsSAML2BindingBuilder configured with information for signing and encryption
+     * @return A response (POSTed form or redirect) with a newly generated artifact
+     * @throws ConfigurationException
+     * @throws ProcessingException
+     * @throws IOException
+     */
+    protected Response buildLogoutArtifactResponse(UserSessionModel userSession,
+                                                   String redirectUri, Document samlDocument,
+                                                   JaxrsSAML2BindingBuilder bindingBuilder)
+            throws ConfigurationException, ProcessingException, IOException {
+        String artifact = SamlProtocolUtils.buildArtifact(RealmsResource.realmBaseUrl(uriInfo).build(realm.getName()).toString());
+
+        //save ArtifactResponse in localmap and in cache
+        Document artifactResponse = SamlProtocolUtils.buildArtifactResponse(samlDocument);
+        bindingBuilder.postBinding(artifactResponse); //this step performs necessary signatures and encryption
+
+        userSession.setNote(artifact, DocumentUtil.getDocumentAsString(artifactResponse));
+
+        //return message with artifact
+        String relayState = userSession.getNote(SAML_LOGOUT_RELAY_STATE);
+
+        logger.debug("Sending artifact for LogoutResponse " + artifact + " to user " + userSession.getLoginUsername());
+
+        if (isLogoutPostBindingForInitiator(userSession)) {
             return artifactPost(redirectUri, artifact, relayState, bindingBuilder);
         } else {
             return artifactRedirect(redirectUri, artifact, relayState);
