@@ -965,6 +965,7 @@ public class SamlService extends AuthorizationEndpointBase {
             String response = userSession.getNote(artifact);
             if (response != null && ! response.isEmpty()) {
                 userSession.removeNote(artifact);
+                session.sessions().removeUserSession(realm, userSession);
                 return DocumentUtil.getDocument(response);
             }
         }

@@ -17,7 +17,6 @@
 
 package org.keycloak.protocol.saml;
 
-import com.google.common.base.Charsets;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -30,10 +29,7 @@ import org.keycloak.common.util.KeycloakUriBuilder;
 import org.keycloak.connections.httpclient.HttpClientProvider;
 import org.keycloak.dom.saml.v2.assertion.AssertionType;
 import org.keycloak.dom.saml.v2.assertion.AttributeStatementType;
-import org.keycloak.dom.saml.v2.protocol.ArtifactResponseType;
 import org.keycloak.dom.saml.v2.protocol.ResponseType;
-import org.keycloak.dom.saml.v2.protocol.StatusCodeType;
-import org.keycloak.dom.saml.v2.protocol.StatusType;
 import org.keycloak.events.Details;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
@@ -58,41 +54,28 @@ import org.keycloak.saml.SAML2LogoutRequestBuilder;
 import org.keycloak.saml.SAML2LogoutResponseBuilder;
 import org.keycloak.saml.SignatureAlgorithm;
 import org.keycloak.saml.common.constants.GeneralConstants;
-import org.keycloak.saml.common.constants.JBossSAMLConstants;
 import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
 import org.keycloak.saml.common.exceptions.ConfigurationException;
 import org.keycloak.saml.common.exceptions.ParsingException;
 import org.keycloak.saml.common.exceptions.ProcessingException;
 import org.keycloak.saml.common.util.DocumentUtil;
-import org.keycloak.saml.common.util.StaxUtil;
 import org.keycloak.saml.common.util.XmlKeyInfoKeyNameTransformer;
-import org.keycloak.saml.processing.core.saml.v2.common.IDGenerator;
-import org.keycloak.saml.processing.core.saml.v2.util.XMLTimeUtil;
-import org.keycloak.saml.processing.core.saml.v2.writers.SAMLResponseWriter;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
 import org.keycloak.services.ErrorPage;
+import org.keycloak.services.managers.AuthenticationManager;
 import org.keycloak.services.managers.AuthenticationSessionManager;
-import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.managers.ResourceAdminManager;
 import org.keycloak.services.messages.Messages;
 import org.keycloak.services.resources.RealmsResource;
 import org.keycloak.sessions.CommonClientSessionModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import javax.ws.rs.core.*;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
-import java.security.SecureRandom;
 import java.util.*;
 
 import static org.keycloak.common.util.HtmlUtils.escapeAttribute;
@@ -582,6 +565,7 @@ public class SamlProtocol implements LoginProtocol {
             }
             Document samlDocument = logoutBuilder.buildDocument();
 
+            //If this session uses artifact binding, send an artifact instread of the LogoutRequest
             if ("true".equals(clientSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get()))) {
                 return buildArtifactAuthenticatedResponse(clientSession, bindingUri, samlDocument, binding);
             }
@@ -663,8 +647,9 @@ public class SamlProtocol implements LoginProtocol {
     protected Response buildLogoutResponse(UserSessionModel userSession, String logoutBindingUri, SAML2LogoutResponseBuilder builder, JaxrsSAML2BindingBuilder binding) throws ConfigurationException, ProcessingException, IOException {
 
         Document samlDocument = builder.buildDocument();
-
+        //if artifact binding is used, send an artifact instead of the LogoutResponse and defer the cleanup of the userSession
         if ("true".equals(userSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get()))){
+            userSession.setNote(AuthenticationManager.DEFER_CLEANUP, "true");
             return buildLogoutArtifactResponse(userSession, logoutBindingUri, samlDocument, binding);
         }
 
