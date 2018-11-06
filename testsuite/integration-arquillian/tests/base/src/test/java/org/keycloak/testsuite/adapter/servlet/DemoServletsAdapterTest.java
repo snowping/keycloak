@@ -145,7 +145,7 @@ public class DemoServletsAdapterTest extends AbstractServletsAdapterTest {
     protected OIDCLogin jsDriverTestRealmLoginPage;
 
     @Page
-    private CustomerPortal customerPortal;
+    protected CustomerPortal customerPortal;
     @Page
     private CustomerPortalNoConf customerPortalNoConf;
     @Page
@@ -169,13 +169,13 @@ public class DemoServletsAdapterTest extends AbstractServletsAdapterTest {
     @Page
     private OAuthGrant oAuthGrantPage;
     @Page
-    private Applications applicationsPage;
+    protected Applications applicationsPage;
     @Page
-    private LoginEvents loginEventsPage;
+    protected LoginEvents loginEventsPage;
     @Page
     private BasicAuth basicAuthPage;
     @Page
-    private Config configPage;
+    protected Config configPage;
     @Page
     private ClientSecretJwtSecurePortal clientSecretJwtSecurePortal;
     @Page
@@ -393,7 +393,7 @@ public class DemoServletsAdapterTest extends AbstractServletsAdapterTest {
         assertCurrentUrlStartsWithLoginUrlOf(testRealmPage);
     }
     
-    private void assertLogged() {
+    protected void assertLogged() {
         assertPageContains("Bill Burke");
         assertPageContains("Stian Thorgersen");
     }
@@ -831,9 +831,8 @@ public class DemoServletsAdapterTest extends AbstractServletsAdapterTest {
     @Test
     public void testVerifyTokenAudience() {
         // Generate audience client scope
-        Response resp = adminClient.realm("demo").clientScopes().generateAudienceClientScope("customer-db-audience-required");
-        String clientScopeId = ApiUtil.getCreatedId(resp);
-        resp.close();
+        String clientScopeId = testingClient.testing().generateAudienceClientScope("demo", "customer-db-audience-required");
+
         ClientResource client = ApiUtil.findClientByClientId(adminClient.realm("demo"), "customer-portal");
         client.addOptionalClientScope(clientScopeId);
 
