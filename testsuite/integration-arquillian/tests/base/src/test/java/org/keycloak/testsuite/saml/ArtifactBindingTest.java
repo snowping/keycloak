@@ -41,8 +41,16 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.*;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.isEmptyOrNullString;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.keycloak.testsuite.util.Matchers.isSamlResponse;
 import static org.keycloak.testsuite.util.Matchers.statusCodeIsHC;
 import static org.keycloak.testsuite.util.SamlClient.Binding.POST;
@@ -77,27 +85,26 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                     return so;
                 }).build()
                 .login().user(bburkeUser).build().doNotFollowRedirects().executeAndTransform(resp -> EntityUtils.toString(resp.getEntity()));
-        assertTrue(response.contains(GeneralConstants.SAML_ARTIFACT_KEY));
+        assertThat(response, containsString(GeneralConstants.SAML_ARTIFACT_KEY));
 
         Pattern artifactPattern = Pattern.compile("NAME=\"SAMLart\" VALUE=\"((?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=))");
         Matcher m = artifactPattern.matcher(response);
-        assertTrue(m.find());
+        assertThat(true, is(m.find()));
 
         String artifactB64 = m.group(1);
-        assertNotNull(artifactB64);
-        assertFalse(artifactB64.isEmpty());
+        assertThat(artifactB64,not(isEmptyOrNullString()));
 
         byte[] artifact = Base64.getDecoder().decode(artifactB64);
-        assertEquals(44, artifact.length);
-        assertEquals(0, artifact[0]);
-        assertEquals(4, artifact[1]);
-        assertEquals(0, artifact[2]);
-        assertEquals(0, artifact[3]);
+        assertThat(44, is(artifact.length));
+        assertThat(0, is(artifact[0]));
+        assertThat(4, is(artifact[1]));
+        assertThat(0, is(artifact[2]));
+        assertThat(0, is(artifact[3]));
 
         MessageDigest sha1Digester = MessageDigest.getInstance("SHA-1");
         byte[] source = sha1Digester.digest("http://localhost:8180/auth/realms/demo".getBytes(Charsets.UTF_8));
         for (int i = 0; i < 20; i++) {
-            assertEquals(source[i], artifact[i+4]);
+            assertThat(source[i], is(artifact[i+4]));
         }
     }
 
@@ -112,11 +119,11 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .login().user(bburkeUser).build().handleArtifact(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST).build()
                 .doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
 
-        assertTrue(response.getSamlObject() instanceof ArtifactResponseType);
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), artifactResponse.getStatus().getStatusCode().getValue().toString());
-        assertNull(artifactResponse.getSignature());
-        assertTrue(artifactResponse.getAny() instanceof ResponseType);
+        assertThat(artifactResponse.getSignature(), nullValue());
+        assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
         ResponseType samlResponse = (ResponseType)artifactResponse.getAny();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), samlResponse.getStatus().getStatusCode().getValue().toString());
     }
@@ -136,10 +143,10 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                         , SAML_CLIENT_SALES_POST_SIG_PUBLIC_KEY).build()
                 .doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
 
-        assertTrue(response.getSamlObject() instanceof ArtifactResponseType);
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), artifactResponse.getStatus().getStatusCode().getValue().toString());
-        assertTrue(artifactResponse.getAny() instanceof ResponseType);
+        assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
         ResponseType samlResponse = (ResponseType)artifactResponse.getAny();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), samlResponse.getStatus().getStatusCode().getValue().toString());
     }
@@ -159,8 +166,8 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .doNotFollowRedirects().executeAndTransform(this::extractSoapMessage);
 
         String soapMessage = DocumentUtil.asString(response);
-        assertFalse(soapMessage.contains("ArtifactResponse"));
-        assertTrue(soapMessage.contains("invalid_signature"));
+        assertThat(soapMessage, not(containsString("ArtifactResponse")));
+        assertThat(soapMessage, containsString("invalid_signature"));
     }
 
     @Test
@@ -179,8 +186,8 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .handleArtifact(handleArifactBuilder).replayPost(true).build().doNotFollowRedirects().executeAndTransform(this::extractSoapMessage);
 
         String soapMessage = DocumentUtil.asString(response);
-        assertFalse(soapMessage.contains("ArtifactResponse"));
-        assertTrue(soapMessage.contains("Cannot find artifact"));
+        assertThat(soapMessage, not(containsString("ArtifactResponse")));
+        assertThat(soapMessage, containsString("Cannot find artifact"));
     }
 
     @Test
@@ -199,10 +206,10 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .login().user(bburkeUser).build().handleArtifact(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST).build()
                 .doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
 
-        assertTrue(response.getSamlObject() instanceof ArtifactResponseType);
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), artifactResponse.getStatus().getStatusCode().getValue().toString());
-        assertTrue(artifactResponse.getAny() instanceof ResponseType);
+        assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
         ResponseType samlResponse = (ResponseType)artifactResponse.getAny();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), samlResponse.getStatus().getStatusCode().getValue().toString());
     }
@@ -225,11 +232,11 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
 
 
-        assertTrue(response.getSamlObject() instanceof ArtifactResponseType);
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), artifactResponse.getStatus().getStatusCode().getValue().toString());
-        assertNotNull(artifactResponse.getSignature());
-        assertTrue(artifactResponse.getAny() instanceof ResponseType);
+        assertThat(artifactResponse.getSignature(), notNullValue());
+        assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
         ResponseType samlResponse = (ResponseType)artifactResponse.getAny();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), samlResponse.getStatus().getStatusCode().getValue().toString());
     }
@@ -245,10 +252,10 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .login().user(bburkeUser).build().handleArtifact(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST).verifyRedirect(true).build()
                 .doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
 
-        assertTrue(response.getSamlObject() instanceof ArtifactResponseType);
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), artifactResponse.getStatus().getStatusCode().getValue().toString());
-        assertTrue(artifactResponse.getAny() instanceof ResponseType);
+        assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
         ResponseType samlResponse = (ResponseType)artifactResponse.getAny();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), samlResponse.getStatus().getStatusCode().getValue().toString());
     }
@@ -279,11 +286,11 @@ public class ArtifactBindingTest extends AbstractSamlTest {
             synchronized (ars) {
                 ars.wait();
                 SAMLDocumentHolder response = builder.artifactMessage(camb).build().login().user(bburkeUser).build().getSamlResponse(SamlClient.Binding.POST);
-                assertTrue(response.getSamlObject() instanceof ResponseType);
+                assertThat(response.getSamlObject(), instanceOf(ResponseType.class));
                 ResponseType rt = (ResponseType)response.getSamlObject();
-                assertFalse(rt.getAssertions().isEmpty());
-                assertNotNull(ars.getLastArtifactResolve());
-                assertEquals(camb.getLastArtifact(), ars.getLastArtifactResolve().getArtifact());
+                assertThat(rt.getAssertions(),not(empty()));
+                assertThat(ars.getLastArtifactResolve(), notNullValue());
+                assertThat(camb.getLastArtifact(), is(ars.getLastArtifactResolve().getArtifact()));
             }
         } finally {
             ars.stop();
@@ -314,11 +321,11 @@ public class ArtifactBindingTest extends AbstractSamlTest {
             synchronized (ars) {
                 ars.wait();
                 SAMLDocumentHolder response = builder.artifactMessage(camb).build().login().user(bburkeUser).build().getSamlResponse(REDIRECT);
-                assertTrue(response.getSamlObject() instanceof ResponseType);
+                assertThat(response.getSamlObject(), instanceOf(ResponseType.class));
                 ResponseType rt = (ResponseType)response.getSamlObject();
-                assertFalse(rt.getAssertions().isEmpty());
-                assertNotNull(ars.getLastArtifactResolve());
-                assertEquals(camb.getLastArtifact(), ars.getLastArtifactResolve().getArtifact());
+                assertThat(rt.getAssertions(),not(empty()));
+                assertThat(ars.getLastArtifactResolve(), notNullValue());
+                assertThat(camb.getLastArtifact(), is(ars.getLastArtifactResolve().getArtifact()));
             }
         } finally {
             ars.stop();
@@ -348,7 +355,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
             synchronized (ars) {
                 ars.wait();
                 String response = builder.artifactMessage(camb).build().executeAndTransform(resp -> EntityUtils.toString(resp.getEntity()));
-                assertTrue(response.contains("Invalid Request"));
+                assertThat(response, containsString("Invalid Request"));
             }
         } finally {
             ars.stop();
@@ -383,10 +390,10 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                             return samlObj;
                         })
                         .build().artifactMessage(camb).build().getSamlResponse(POST);
-               assertTrue(samlResponse.getSamlObject() instanceof StatusResponseType);
+               assertThat(samlResponse.getSamlObject(), instanceOf(StatusResponseType.class));
                StatusResponseType srt = (StatusResponseType) samlResponse.getSamlObject();
                assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), srt.getStatus().getStatusCode().getValue().toString());
-               assertEquals(camb.getLastArtifact(), ars.getLastArtifactResolve().getArtifact());
+               assertThat(camb.getLastArtifact(), is(ars.getLastArtifactResolve().getArtifact()));
             }
         } finally {
             ars.stop();
@@ -395,7 +402,6 @@ public class ArtifactBindingTest extends AbstractSamlTest {
 
 
     /************************ LOGOUT TESTS ************************/
-
 
     @Test
     public void testReceiveArtifactLogoutFullWithRedirect() throws ParsingException, ConfigurationException, ProcessingException, InterruptedException {
@@ -430,10 +436,10 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                             return samlObj;
                         })
                         .build().artifactMessage(camb).build().getSamlResponse(REDIRECT);
-                assertTrue(samlResponse.getSamlObject() instanceof StatusResponseType);
+                assertThat(samlResponse.getSamlObject(), instanceOf(StatusResponseType.class));
                 StatusResponseType srt = (StatusResponseType) samlResponse.getSamlObject();
                 assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), srt.getStatus().getStatusCode().getValue().toString());
-                assertEquals(camb.getLastArtifact(), ars.getLastArtifactResolve().getArtifact());
+                assertThat(camb.getLastArtifact(), is(ars.getLastArtifactResolve().getArtifact()));
             }
         } finally {
             ars.stop();
@@ -461,26 +467,25 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .logoutRequest(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST, SamlClient.Binding.POST).build()
                 .doNotFollowRedirects().executeAndTransform(resp -> EntityUtils.toString(resp.getEntity()));
 
-        assertTrue(response.contains(GeneralConstants.SAML_ARTIFACT_KEY));
+        assertThat(response, containsString(GeneralConstants.SAML_ARTIFACT_KEY));
         Pattern artifactPattern = Pattern.compile("NAME=\"SAMLart\" VALUE=\"((?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=))");
         Matcher m = artifactPattern.matcher(response);
-        assertTrue(m.find());
+        assertThat(true, is(m.find()));
 
         String artifactB64 = m.group(1);
-        assertNotNull(artifactB64);
-        assertFalse(artifactB64.isEmpty());
+        assertThat(artifactB64, not(isEmptyOrNullString()));
 
         byte[] artifact = Base64.getDecoder().decode(artifactB64);
-        assertEquals(44, artifact.length);
-        assertEquals(0, artifact[0]);
-        assertEquals(4, artifact[1]);
-        assertEquals(0, artifact[2]);
-        assertEquals(0, artifact[3]);
+        assertThat(44, is(artifact.length));
+        assertThat(0, is(artifact[0]));
+        assertThat(4, is(artifact[1]));
+        assertThat(0, is(artifact[2]));
+        assertThat(0, is(artifact[3]));
 
         MessageDigest sha1Digester = MessageDigest.getInstance("SHA-1");
         byte[] source = sha1Digester.digest("http://localhost:8180/auth/realms/demo".getBytes(Charsets.UTF_8));
         for (int i = 0; i < 20; i++) {
-            assertEquals(source[i], artifact[i+4]);
+            assertThat(source[i], is(artifact[i+4]));
         }
     }
 
@@ -503,14 +508,14 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .logoutRequest(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST, POST).build()
                 .handleArtifact(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST).build().doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
 
-        assertTrue(response.getSamlObject() instanceof ArtifactResponseType);
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), artifactResponse.getStatus().getStatusCode().getValue().toString());
-        assertNull(artifactResponse.getSignature());
-        assertFalse(artifactResponse.getAny() instanceof ResponseType);
-        assertFalse(artifactResponse.getAny() instanceof ArtifactResponseType);
-        assertFalse(artifactResponse.getAny() instanceof NameIDMappingResponseType);
-        assertTrue(artifactResponse.getAny() instanceof StatusResponseType);
+        assertThat(artifactResponse.getSignature(), nullValue());
+        assertThat(artifactResponse.getAny(), not(instanceOf(ResponseType.class)));
+        assertThat(artifactResponse.getAny(), not(instanceOf(ArtifactResponseType.class)));
+        assertThat(artifactResponse.getAny(), not(instanceOf(NameIDMappingResponseType.class)));
+        assertThat(artifactResponse.getAny(), instanceOf(StatusResponseType.class));
         StatusResponseType samlResponse = (StatusResponseType)artifactResponse.getAny();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), samlResponse.getStatus().getStatusCode().getValue().toString());
     }
@@ -535,14 +540,14 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .handleArtifact(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST).verifyRedirect(true).build()
                 .doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
 
-        assertTrue(response.getSamlObject() instanceof ArtifactResponseType);
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), artifactResponse.getStatus().getStatusCode().getValue().toString());
-        assertNull(artifactResponse.getSignature());
-        assertFalse(artifactResponse.getAny() instanceof ResponseType);
-        assertFalse(artifactResponse.getAny() instanceof ArtifactResponseType);
-        assertFalse(artifactResponse.getAny() instanceof NameIDMappingResponseType);
-        assertTrue(artifactResponse.getAny() instanceof StatusResponseType);
+        assertThat(artifactResponse.getSignature(), nullValue());
+        assertThat(artifactResponse.getAny(), not(instanceOf(ResponseType.class)));
+        assertThat(artifactResponse.getAny(), not(instanceOf(ArtifactResponseType.class)));
+        assertThat(artifactResponse.getAny(), not(instanceOf(NameIDMappingResponseType.class)));
+        assertThat(artifactResponse.getAny(), instanceOf(StatusResponseType.class));
         StatusResponseType samlResponse = (StatusResponseType)artifactResponse.getAny();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), samlResponse.getStatus().getStatusCode().getValue().toString());
     }
@@ -577,11 +582,11 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .signWith(SAML_CLIENT_SALES_POST_SIG_PRIVATE_KEY, SAML_CLIENT_SALES_POST_SIG_PUBLIC_KEY).build()
                 .doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
 
-        assertTrue(response.getSamlObject() instanceof ArtifactResponseType);
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), artifactResponse.getStatus().getStatusCode().getValue().toString());
-        assertNotNull(artifactResponse.getSignature());
-        assertTrue(artifactResponse.getAny() instanceof LogoutRequestType);
+        assertThat(artifactResponse.getSignature(), notNullValue());
+        assertThat(artifactResponse.getAny(), instanceOf(LogoutRequestType.class));
     }
 
     @Test
@@ -621,11 +626,11 @@ public class ArtifactBindingTest extends AbstractSamlTest {
                 .build().handleArtifact(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST).verifyRedirect(true).build()
                 .doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
 
-        assertTrue(response.getSamlObject() instanceof ArtifactResponseType);
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
-        assertNull(artifactResponse.getSignature());
+        assertThat(artifactResponse.getSignature(), nullValue());
         assertEquals(JBossSAMLURIConstants.STATUS_SUCCESS.get(), artifactResponse.getStatus().getStatusCode().getValue().toString());
-        assertTrue(artifactResponse.getAny() instanceof LogoutRequestType);
+        assertThat(artifactResponse.getAny(), instanceOf(LogoutRequestType.class));
     }
 
 
