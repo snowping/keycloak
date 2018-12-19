@@ -927,13 +927,14 @@ public class SamlService extends AuthorizationEndpointBase {
             throw new ProcessingException(Errors.INVALID_SIGNATURE);
         }
 
-        Document artifactResponseDocument = getArtifact(client, artifactResolveMessage.getArtifact());
+        String artifactResponse = getArtifact(client, artifactResolveMessage.getArtifact());
+        Document artifactResponseDocument = DocumentUtil.getDocument(artifactResponse);
 
         Soap.SoapMessageBuilder messageBuilder = Soap.createMessage();
         messageBuilder.addToBody(artifactResponseDocument);
 
         logger.debug("Sending artifactResponse message for artifact " + artifactResolveMessage.getArtifact() + "\n" +
-                "Message: \n" + DocumentUtil.getDocumentAsString(artifactResponseDocument));
+                "Message: \n" + artifactResponse);
 
         return messageBuilder.build();
     }
@@ -948,7 +949,7 @@ public class SamlService extends AuthorizationEndpointBase {
      * @throws ConfigurationException
      * @throws ProcessingException
      */
-    private Document getArtifact(ClientModel client, String artifact) throws ParsingException, ConfigurationException, ProcessingException {
+    private String getArtifact(ClientModel client, String artifact) throws ParsingException, ConfigurationException, ProcessingException {
         List<UserSessionModel> userSessions = session.sessions().getUserSessions(realm, client);
         for (UserSessionModel userSession: userSessions) {
             AuthenticatedClientSessionModel clientSession = userSession.getAuthenticatedClientSessionByClient(client.getId());
@@ -956,7 +957,7 @@ public class SamlService extends AuthorizationEndpointBase {
                 String response = clientSession.getNote(artifact);
                 if (response != null && ! response.isEmpty()) {
                     clientSession.removeNote(artifact);
-                    return DocumentUtil.getDocument(response);
+                    return response;
                 }
             }
         }
@@ -966,7 +967,7 @@ public class SamlService extends AuthorizationEndpointBase {
             if (response != null && ! response.isEmpty()) {
                 userSession.removeNote(artifact);
                 session.sessions().removeUserSession(realm, userSession);
-                return DocumentUtil.getDocument(response);
+                return response;
             }
         }
         throw new ProcessingException("Cannot find artifact "+ artifact + " in cache");
