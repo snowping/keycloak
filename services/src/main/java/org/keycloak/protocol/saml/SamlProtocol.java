@@ -71,12 +71,23 @@ import org.keycloak.sessions.CommonClientSessionModel;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.w3c.dom.Document;
 
-import javax.ws.rs.core.*;
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
+import javax.ws.rs.core.UriInfo;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.security.PublicKey;
-import java.util.*;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 import static org.keycloak.common.util.HtmlUtils.escapeAttribute;
 
