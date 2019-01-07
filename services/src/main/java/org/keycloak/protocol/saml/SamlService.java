@@ -905,7 +905,7 @@ public class SamlService extends AuthorizationEndpointBase {
 
         ResteasyProviderFactory.getInstance().injectProperties(bindingService);
 
-        return bindingService.authenticate(inputStream);
+        return bindingService.authenticate(soapBodyContents);
     }
 
     /**
