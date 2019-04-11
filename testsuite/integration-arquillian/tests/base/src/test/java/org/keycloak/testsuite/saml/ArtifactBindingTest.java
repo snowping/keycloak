@@ -3,6 +3,7 @@ package org.keycloak.testsuite.saml;
 import com.google.common.base.Charsets;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.util.EntityUtils;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Test;
 import org.keycloak.dom.saml.v2.SAML2Object;
@@ -29,6 +30,7 @@ import org.keycloak.testsuite.util.SamlClient;
 import org.keycloak.testsuite.util.SamlClientBuilder;
 import org.keycloak.testsuite.util.saml.CreateArtifactMessageStepBuilder;
 import org.keycloak.testsuite.util.saml.HandleArtifactStepBuilder;
+import org.keycloak.testsuite.utils.io.IOUtil;
 import org.w3c.dom.Document;
 
 import javax.ws.rs.core.Response;
@@ -675,6 +677,31 @@ public class ArtifactBindingTest extends AbstractSamlTest {
             builder = builder.userPrincipal(nameIdValue.getValue(), nameIdValue.getFormat() == null ? null : nameIdValue.getFormat().toString());
         }
         ars.setResponseDocument(builder.buildDocument());
+    }
+
+    /************************ IMPORT CLIENT TESTS ************************/
+    @Test
+    public void testImportClientArtifactResolutionSingleServices() {
+        Document doc = IOUtil.loadXML(ArtifactBindingTest.class.getResourceAsStream("/saml/sp-metadata-artifact-simple.xml"));
+        ClientRepresentation clientRep = adminClient.realm(REALM_NAME).convertClientDescription(IOUtil.documentToString(doc));
+        assertThat(clientRep.getAttributes().get(SamlProtocol.SAML_ARTIFACT_RESOLUTION_SERVICE_URL_ATTRIBUTE), is("https://test.keycloak.com/auth/login/epd/callback/soap"));
+        assertThat(clientRep.getAttributes().get(SamlProtocol.SAML_ASSERTION_CONSUMER_URL_ARTIFACT_ATTRIBUTE), is("https://test.keycloak.com/auth/login/epd/callback/http-artifact"));
+    }
+
+    @Test
+    public void testImportClientMultipleServices() {
+        Document doc = IOUtil.loadXML(ArtifactBindingTest.class.getResourceAsStream("/saml/sp-metadata-artifact-multiple.xml"));
+        ClientRepresentation clientRep = adminClient.realm(REALM_NAME).convertClientDescription(IOUtil.documentToString(doc));
+        assertThat(clientRep.getAttributes().get(SamlProtocol.SAML_ARTIFACT_RESOLUTION_SERVICE_URL_ATTRIBUTE), is("https://test.keycloak.com/auth/login/epd/callback/soap-1"));
+        assertThat(clientRep.getAttributes().get(SamlProtocol.SAML_ASSERTION_CONSUMER_URL_ARTIFACT_ATTRIBUTE), Matchers.startsWith("https://test.keycloak.com/auth/login/epd/callback/http-artifact"));
+    }
+
+    @Test
+    public void testImportClientMultipleServicesWithDefault() {
+        Document doc = IOUtil.loadXML(ArtifactBindingTest.class.getResourceAsStream("/saml/sp-metadata-artifact-multiple-default.xml"));
+        ClientRepresentation clientRep = adminClient.realm(REALM_NAME).convertClientDescription(IOUtil.documentToString(doc));
+        assertThat(clientRep.getAttributes().get(SamlProtocol.SAML_ARTIFACT_RESOLUTION_SERVICE_URL_ATTRIBUTE), is("https://test.keycloak.com/auth/login/epd/callback/soap-9"));
+        assertThat(clientRep.getAttributes().get(SamlProtocol.SAML_ASSERTION_CONSUMER_URL_ARTIFACT_ATTRIBUTE), Matchers.startsWith("https://test.keycloak.com/auth/login/epd/callback/http-artifact"));
     }
 
 }
