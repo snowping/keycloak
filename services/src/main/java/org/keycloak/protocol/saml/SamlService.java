@@ -115,6 +115,7 @@ import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
 import org.keycloak.saml.validators.DestinationValidator;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * Resource class for the saml connect token service
@@ -963,6 +964,28 @@ public class SamlService extends AuthorizationEndpointBase {
 
         String artifactResponse = getArtifact(client, artifactResolveMessage.getArtifact());
         Document artifactResponseDocument = DocumentUtil.getDocument(artifactResponse);
+
+        //add "inResponseTo" in artifactResponse
+        if (artifactResolveMessage.getID() != null && !artifactResolveMessage.getID().trim().isEmpty()){
+            Element artifactResponseElement = artifactResponseDocument.getDocumentElement();
+            artifactResponseElement.setAttribute("InResponseTo", artifactResolveMessage.getID());
+        }
+        //Sign document if necessary, necessary to do this here, as the "inResponseTo" can only be set at this point
+        SamlClient samlClient = new SamlClient(client);
+        JaxrsSAML2BindingBuilder bindingBuilder = new JaxrsSAML2BindingBuilder();
+        if (samlClient.requiresRealmSignature()) {
+            KeyManager keyManager = session.keys();
+            KeyManager.ActiveRsaKey keys = keyManager.getActiveRsaKey(realm);
+            String keyName = samlClient.getXmlSigKeyInfoKeyNameTransformer().getKeyName(keys.getKid(), keys.getCertificate());
+            String canonicalization = samlClient.getCanonicalizationMethod();
+            if (canonicalization != null) {
+                bindingBuilder.canonicalizationMethod(canonicalization);
+            }
+            bindingBuilder.signatureAlgorithm(samlClient.getSignatureAlgorithm()).signWith(keyName, keys.getPrivateKey(), keys.getPublicKey(), keys.getCertificate()).signDocument();
+            bindingBuilder.postBinding(artifactResponseDocument);
+        }
+        artifactResponse = DocumentUtil.asString(artifactResponseDocument);
+
 
         Soap.SoapMessageBuilder messageBuilder = Soap.createMessage();
         messageBuilder.addToBody(artifactResponseDocument);

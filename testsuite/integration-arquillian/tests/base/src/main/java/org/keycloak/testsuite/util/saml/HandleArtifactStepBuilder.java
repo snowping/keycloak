@@ -45,6 +45,7 @@ public class HandleArtifactStepBuilder extends SamlDocumentStepBuilder<ArtifactR
 
     private String signingPrivateKeyPem;
     private String signingPublicKeyPem;
+    private String id = IDGenerator.create("ID_");
     private final String issuer;
     private final URI authServerSamlUrl;
     private boolean verifyRedirect;
@@ -101,6 +102,16 @@ public class HandleArtifactStepBuilder extends SamlDocumentStepBuilder<ArtifactR
     }
 
     /**
+     * Builder method. Calling this method will set the ArtifactResolve from the standard generated to a specific id
+     * @param id the value to which to set the ArtifactResolve's id
+     * @return this HandleArtifactStepBuilder
+     */
+    public HandleArtifactStepBuilder setArtifactResolveId(String id){
+        this.id = id;
+        return this;
+    }
+
+    /**
      * Main method. Can read a response with an artifact (redirect or post) and return a POSTed SOAP message containing
      * the ArtifactResolve message. The behaviour changes depending on what builder methods were called.
      *
@@ -118,7 +129,7 @@ public class HandleArtifactStepBuilder extends SamlDocumentStepBuilder<ArtifactR
             return replayPostMessage;
         }
 
-        ArtifactResolveType artifactResolve = new ArtifactResolveType(IDGenerator.create("ID_"),
+        ArtifactResolveType artifactResolve = new ArtifactResolveType(id,
                 XMLTimeUtil.getIssueInstant());
         NameIDType nameIDType = new NameIDType();
         nameIDType.setValue(issuer);

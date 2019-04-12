@@ -461,7 +461,8 @@ public class SamlProtocol implements LoginProtocol {
         JaxrsSAML2BindingBuilder bindingBuilder = new JaxrsSAML2BindingBuilder();
         bindingBuilder.relayState(relayState);
 
-        if (samlClient.requiresRealmSignature()) {
+        //Don't sign document here if we're doing artifact binding
+        if (samlClient.requiresRealmSignature() && !"true".equals(clientSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get()))) {
             String canonicalization = samlClient.getCanonicalizationMethod();
             if (canonicalization != null) {
                 bindingBuilder.canonicalizationMethod(canonicalization);
@@ -565,7 +566,7 @@ public class SamlProtocol implements LoginProtocol {
                 logger.warnf("Failed to logout client %s, skipping this client.  Please configure the logout service url in the admin console for your client applications.", client.getClientId());
                 return null;
             }
-            JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient);
+            JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient, "true".equals(clientSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get())));
             SAML2LogoutRequestBuilder logoutBuilder = createLogoutRequest(bindingUri, clientSession, client);
             if (!postBinding) {
                 if (samlClient.requiresRealmSignature() && samlClient.addExtensionsElementWithKeyInfo()) {
@@ -684,7 +685,7 @@ public class SamlProtocol implements LoginProtocol {
 
         String logoutRequestString = null;
         try {
-            JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient);
+            JaxrsSAML2BindingBuilder binding = createBindingBuilder(samlClient, "true".equals(clientSession.getNote(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.get())));
             // This is POST binding, hence KeyID is included in dsig:KeyInfo/dsig:KeyName, no need to add <samlp:Extensions> element
             logoutRequestString = binding.postBinding(logoutBuilder.buildDocument()).encoded();
         } catch (Exception e) {
@@ -748,9 +749,9 @@ public class SamlProtocol implements LoginProtocol {
         return false;
     }
 
-    private JaxrsSAML2BindingBuilder createBindingBuilder(SamlClient samlClient) {
+    private JaxrsSAML2BindingBuilder createBindingBuilder(SamlClient samlClient, boolean skipRealmSignature) {
         JaxrsSAML2BindingBuilder binding = new JaxrsSAML2BindingBuilder();
-        if (samlClient.requiresRealmSignature()) {
+        if (!skipRealmSignature && samlClient.requiresRealmSignature()) {
             KeyManager.ActiveRsaKey keys = session.keys().getActiveRsaKey(realm);
             String keyName = samlClient.getXmlSigKeyInfoKeyNameTransformer().getKeyName(keys.getKid(), keys.getCertificate());
             binding.signatureAlgorithm(samlClient.getSignatureAlgorithm()).signWith(keyName, keys.getPrivateKey(), keys.getPublicKey(), keys.getCertificate()).signDocument();

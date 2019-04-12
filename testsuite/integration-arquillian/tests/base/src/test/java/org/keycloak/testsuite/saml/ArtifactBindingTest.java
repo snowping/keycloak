@@ -6,6 +6,8 @@ import org.apache.http.util.EntityUtils;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Test;
+import org.keycloak.common.VerificationException;
+import org.keycloak.common.util.PemUtils;
 import org.keycloak.dom.saml.v2.SAML2Object;
 import org.keycloak.dom.saml.v2.assertion.AssertionType;
 import org.keycloak.dom.saml.v2.assertion.AuthnStatementType;
@@ -13,8 +15,10 @@ import org.keycloak.dom.saml.v2.assertion.NameIDType;
 import org.keycloak.dom.saml.v2.protocol.*;
 import org.keycloak.protocol.saml.SamlConfigAttributes;
 import org.keycloak.protocol.saml.SamlProtocol;
+import org.keycloak.protocol.saml.SamlProtocolUtils;
 import org.keycloak.protocol.saml.profile.util.Soap;
 import org.keycloak.representations.idm.ClientRepresentation;
+import org.keycloak.rotation.HardcodedKeyLocator;
 import org.keycloak.saml.SAML2LogoutRequestBuilder;
 import org.keycloak.saml.common.constants.GeneralConstants;
 import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
@@ -38,6 +42,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
@@ -126,6 +131,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         assertThat(artifactResponse, isSamlStatusResponse(JBossSAMLURIConstants.STATUS_SUCCESS));
         assertThat(artifactResponse.getSignature(), nullValue());
         assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
+        assertThat(artifactResponse.getInResponseTo(), not(isEmptyOrNullString()));
         ResponseType samlResponse = (ResponseType)artifactResponse.getAny();
         assertThat(samlResponse, isSamlStatusResponse(JBossSAMLURIConstants.STATUS_SUCCESS));
     }
@@ -151,6 +157,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
         ResponseType samlResponse = (ResponseType)artifactResponse.getAny();
         assertThat(samlResponse, isSamlStatusResponse(JBossSAMLURIConstants.STATUS_SUCCESS));
+
     }
 
     @Test
@@ -193,7 +200,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
     }
 
     @Test
-    public void testArtifactBindingLoginForceArifactBinding() {
+    public void testArtifactBindingLoginForceArtifactBinding() {
         ClientRepresentation salesRep = adminClient.realm(REALM_NAME).clients().findByClientId(SAML_CLIENT_ID_SALES_POST).get(0);
 
         adminClient.realm(REALM_NAME)
@@ -217,7 +224,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
     }
 
     @Test
-    public void testArtifactBindingLoginSignedArtifactResponse() {
+    public void testArtifactBindingLoginSignedArtifactResponse() throws VerificationException {
         ClientRepresentation salesRep = adminClient.realm(REALM_NAME).clients().findByClientId(SAML_CLIENT_ID_SALES_POST).get(0);
 
         adminClient.realm(REALM_NAME)
@@ -239,8 +246,11 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         assertThat(artifactResponse, isSamlStatusResponse(JBossSAMLURIConstants.STATUS_SUCCESS));
         assertThat(artifactResponse.getSignature(), notNullValue());
         assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
+        assertThat(artifactResponse.getInResponseTo(), not(isEmptyOrNullString()));
         ResponseType samlResponse = (ResponseType)artifactResponse.getAny();
         assertThat(samlResponse, isSamlStatusResponse(JBossSAMLURIConstants.STATUS_SUCCESS));
+        X509Certificate cert = PemUtils.decodeCertificate(adminClient.realm(REALM_NAME).keys().getKeyMetadata().getKeys().stream().filter(x -> x.getType().equals("RSA")).findFirst().get().getCertificate());
+        SamlProtocolUtils.verifyDocumentSignature(response.getSamlDocument(), new HardcodedKeyLocator(cert.getPublicKey()));
     }
 
     @Test
@@ -258,8 +268,28 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
         assertThat(artifactResponse, isSamlStatusResponse(JBossSAMLURIConstants.STATUS_SUCCESS));
         assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
+        assertThat(artifactResponse.getInResponseTo(), not(isEmptyOrNullString()));
         ResponseType samlResponse = (ResponseType)artifactResponse.getAny();
         assertThat(samlResponse, isSamlStatusResponse(JBossSAMLURIConstants.STATUS_SUCCESS));
+    }
+
+    @Test
+    public void testArtifactResponseContainsCorrectInResponseTo(){
+        SAMLDocumentHolder response = new SamlClientBuilder().authnRequest(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST,
+                SAML_ASSERTION_CONSUMER_URL_SALES_POST, SamlClient.Binding.POST)
+                .transformObject(so -> {
+                    so.setProtocolBinding(JBossSAMLURIConstants.SAML_HTTP_ARTIFACT_BINDING.getUri());
+                    return so;
+                }).build()
+                .login().user(bburkeUser).build().handleArtifact(getAuthServerSamlEndpoint(REALM_NAME), SAML_CLIENT_ID_SALES_POST).setArtifactResolveId("TestId").build()
+                .doNotFollowRedirects().executeAndTransform(this::getArtifactResponse);
+
+        assertThat(response.getSamlObject(), instanceOf(ArtifactResponseType.class));
+        ArtifactResponseType artifactResponse = (ArtifactResponseType)response.getSamlObject();
+        assertThat(artifactResponse, isSamlStatusResponse(JBossSAMLURIConstants.STATUS_SUCCESS));
+        assertThat(artifactResponse.getSignature(), nullValue());
+        assertThat(artifactResponse.getAny(), instanceOf(ResponseType.class));
+        assertThat(artifactResponse.getInResponseTo(), is("TestId"));
     }
 
     /************************ RECEIVE ARTIFACT TESTS ************************/
@@ -555,7 +585,7 @@ public class ArtifactBindingTest extends AbstractSamlTest {
     }
 
     @Test
-    public void testArtifactBindingLogoutTwoClientsPostWithSig() {
+    public void testArtifactBindingLogoutTwoClientsPostWithSig() throws VerificationException {
 
         ClientRepresentation salesRepSig = adminClient.realm(REALM_NAME).clients().findByClientId(SAML_CLIENT_ID_SALES_POST_SIG).get(0);
 
@@ -589,6 +619,8 @@ public class ArtifactBindingTest extends AbstractSamlTest {
         assertThat(artifactResponse, isSamlStatusResponse(JBossSAMLURIConstants.STATUS_SUCCESS));
         assertThat(artifactResponse.getSignature(), notNullValue());
         assertThat(artifactResponse.getAny(), instanceOf(LogoutRequestType.class));
+        X509Certificate cert = PemUtils.decodeCertificate(adminClient.realm(REALM_NAME).keys().getKeyMetadata().getKeys().stream().filter(x -> x.getType().equals("RSA")).findFirst().get().getCertificate());
+        SamlProtocolUtils.verifyDocumentSignature(response.getSamlDocument(), new HardcodedKeyLocator(cert.getPublicKey()));
     }
 
     @Test
